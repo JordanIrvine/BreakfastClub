@@ -21,6 +21,18 @@ $(document).ready(function(){
             }
         });
     });
+
+
+//temperarily disbale "add visit" button after pressed/*
+/*  var fewSeconds = 5;
+  $('#visit').click(function(){
+      // Ajax request
+      var btn = $(this);
+      btn.prop('disabled', true);
+      setTimeout(function(){
+          btn.prop('disabled', false);
+      }, fewSeconds*1000);
+  });*/
 });
 
 </script>
@@ -36,6 +48,7 @@ $(document).ready(function(){
         <th>ClientID</th>
         <th>Name</th>
         <th></th>
+        <th>Join Date</th>
         <th>Last Visit Date</th>
         <th>Total Visits</th>
         <th>Visits Til Free Breakfast </th>
@@ -49,35 +62,22 @@ $(document).ready(function(){
       <tr>
         <td>{{member.clientId}}</td>
         <td><a href="/visitSearch/{{member.clientId}}">{{member.name}}</a><td>
+        <td>{{member.creationDate}}</td>
         <td>{{member.lastBreakfastDate}}</td>
         <td>{{member.totalBreakfast}}</td>
         <td>{{member.leftTillFree}}</td>
-        <td>
-
-          <form action="{{url_for('add_visit', id=member.clientId, name=member.name)}}" method="post">
-              <input type="submit" id="visit" class="btn btn-default" value="Add Visit"></input>
-          </form>
-        </td>
-        <script>
-        //temperarily disbale "add visit" button after pressed
-        var fewSeconds = 5;
-        $('#visit').click(function(){
-            // Ajax request
-            var btn = $(this);
-            btn.prop('disabled', true);
-            setTimeout(function(){
-                btn.prop('disabled', false);
-            }, fewSeconds*1000);
-        });
-        </script>
         <td>
           <form action="{{url_for('memberSearch')}}" method="post">
               <input class="btn btn-success" value="Redeem free breakfast" type="submit"></input>
           </form>
         </td>
-
         <td>
-          <form action="{{url_for('delete_member', id=member.clientId)}}" method="post">
+          <form action="{{url_for('add_visit', id=member.clientId, name=member.name)}}" method="post">
+              <input type="submit" id="visit" class="btn btn-default" value="Add Visit"></input>
+          </form>
+        </td>
+        <td>
+          <form action="{{url_for('delete_member', id=member.clientId )}}" method="post">
             <input type="hidden" name="_method" value="DELETE"></input>
             <input type="submit" onclick="return confirm('Are you sure you want to delete this member? All of this members information will be deleted as well!')" value="Delete" class="btn btn-danger"></input>
           </form>

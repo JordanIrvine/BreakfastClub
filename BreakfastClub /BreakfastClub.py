@@ -166,7 +166,7 @@ def memberSearch():
 	cur = mysql.connection.cursor()
 
 	#Get members
-	result = cur.execute("SELECT * FROM members")
+	result = cur.execute("SELECT * FROM members ORDER BY name")
 
 	members = cur.fetchall()
 
@@ -205,7 +205,7 @@ def visitSearch(id):
 	cur.close()
 
 # Add Visit
-@app.route('/add_visit/<string:id>/<string:name>', methods=['GET', 'POST'])
+@app.route('/add_visit/<string:id>/<string:name>/', methods=['GET', 'POST'])
 @is_logged_in
 def add_visit(id, name):
 	if request.method == 'POST':
@@ -217,8 +217,9 @@ def add_visit(id, name):
 		name = [name]
 		author = session['username']
 
+
 		# Execute
-		cur.execute("INSERT INTO visits(clientID,name,author) VALUES(%s,%s,%s)", (clientId,name,author))
+		cur.execute("INSERT INTO visits(clientId,name,author) VALUES(%s,%s,%s)", (clientId,name,author))
 		# Update members lastBreakfastDate
 		cur.execute("UPDATE members SET lastBreakfastDate = now() WHERE clientId = %s", (clientId))
 
@@ -285,9 +286,12 @@ def delete_member(id):
 	# Create cursor
 	cur = mysql.connection.cursor()
 
-	# Execute
+	# Deletes member
 
 	cur.execute("DELETE FROM members WHERE clientId = %s", [id])
+
+	#deletes visits associated with member
+	cur.execute("DELETE FROM visits WHERE clientId = %s", [id])
 
 	# Commit to DB
 	mysql.connection.commit()
