@@ -165,12 +165,29 @@ def memberSearch():
 	#Create cursor
 	cur = mysql.connection.cursor()
 
+	cur.execute("UPDATE members SET totalBreakfast=(SELECT COUNT(*) FROM visits Where members.clientId = visits.clientId) ")
 	#Get members
 	result = cur.execute("SELECT * FROM members ORDER BY name")
+
+
+
+
+#
+# ******
+# 	breakyCount = cur.execute("UPDATE COUNT(leftTillFree) FROM members Where")
+#
+# 	if statement needs to be made that "if members.LeftTillFree = 0, then show (redeem button) and reset LeftTillFree to 10)
+#   a seprate table will need to be created to keep track of redeemable breakfasts' 
+# ********
+
+
+
+
 
 	members = cur.fetchall()
 
 	if result > 0:
+
 		return render_template('memberSearch.html', members=members)
 	else:
 		msg = 'No members Found'
@@ -220,8 +237,14 @@ def add_visit(id, name):
 
 		# Execute
 		cur.execute("INSERT INTO visits(clientId,name,author) VALUES(%s,%s,%s)", (clientId,name,author))
-		# Update members lastBreakfastDate
-		cur.execute("UPDATE members SET lastBreakfastDate = now() WHERE clientId = %s", (clientId))
+
+		cur.execute("SELECT * FROM visits WHERE clientId = %s", [id])
+
+		cur.execute("UPDATE members SET lastBreakfastDate = now() WHERE clientId = %s", [id])
+
+		cur.execute("UPDATE members SET leftTillFree =leftTillFree-1 WHERE clientId = %s", [id])
+
+		#totalBreakfast = cur.execute("UPDATE members SET totalBreakfast = (COUNT(*) from visits WHERE clientId = %s", (clientId)))
 
 		# Commit to DB"INSERT INTO users(name, email, username, password) VALUES(%s, %s, %s, %s)", (name, email, username, password))
 		mysql.connection.commit()
@@ -239,12 +262,15 @@ def add_visit(id, name):
 def add_member():
 	form = MemberForm(request.form)
 	if request.method == 'POST' and form.validate():
+
+
 		name = form.name.data
 		# Create Cursor
 		cur = mysql.connection.cursor()
 
 		# Execute
 		cur.execute("INSERT INTO members(name) VALUES(%s)",[name])
+
 		# Commit to DB
 		mysql.connection.commit()
 
@@ -270,6 +296,7 @@ def delete_visit(visitId,clientId):
 	# Execute Delete
 	cur.execute("DELETE FROM visits WHERE visitId = %s", [visitId])
 
+	cur.execute("UPDATE members SET leftTillFree =leftTillFree+1 WHERE clientId = %s", [clientId])
 	# Commit to DB
 	mysql.connection.commit()
 
@@ -325,20 +352,6 @@ def searchBar():
 
 	#Close connection
 	cur.close()
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 

@@ -20,22 +20,29 @@ $(document).ready(function(){
                   });
             }
         });
-    });
+      });
+    // var fewSeconds = 5;
+    //   $('#visit').click(function(){
+    //       // Ajax request
+    //       var btn = $(this);
+    //       btn.prop('disabled', true);
+    //       setTimeout(function(){
+    //           btn.prop('disabled', false);
+    //       }, fewSeconds*1000);
+    //   });
 
 
-//temperarily disbale "add visit" button after pressed/*
-/*  var fewSeconds = 5;
-  $('#visit').click(function(){
-      // Ajax request
-      var btn = $(this);
-      btn.prop('disabled', true);
-      setTimeout(function(){
-          btn.prop('disabled', false);
-      }, fewSeconds*1000);
-  });*/
+    var table = document.getElementsByTagName('table')[0],
+        rows = table.getElementsByTagName('tr'),
+        text = 'textContent' in document ? 'textContent' : 'innerText';
+
+    for (var i = 1, len = rows.length; i < len; i++){
+        rows[i].children[0][text] = i + ' ' + rows[i].children[0][text];
+    }
 });
 
 </script>
+
 <bold><center><h3><form action="/search" method=post>
     <div><input input type=text class="search" placeholder="Type to Search..." pull-center></input>
 </form></h3></center></bold>
@@ -45,7 +52,7 @@ $(document).ready(function(){
   <table class="table table-striped" id="myTable">
     <thead>
       <tr>
-        <th>ClientID</th>
+        <th>#</th>
         <th>Name</th>
         <th></th>
         <th>Join Date</th>
@@ -60,7 +67,7 @@ $(document).ready(function(){
     {% for member in members %}
     <tbody>
       <tr>
-        <td>{{member.clientId}}</td>
+        <td></td>
         <td><a href="/visitSearch/{{member.clientId}}">{{member.name}}</a><td>
         <td>{{member.creationDate}}</td>
         <td>{{member.lastBreakfastDate}}</td>
@@ -68,7 +75,7 @@ $(document).ready(function(){
         <td>{{member.leftTillFree}}</td>
         <td>
           <form action="{{url_for('memberSearch')}}" method="post">
-              <input class="btn btn-success" value="Redeem free breakfast" type="submit"></input>
+              <input class="btn btn-success" value="Redeem free breakfast" type="button" display="none"></input>
           </form>
         </td>
         <td>

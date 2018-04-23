@@ -1,12 +1,25 @@
 {% extends 'layout.html' %}
 
 {% block body %}
+<script>
+$(document).ready(function(){
+    var table = document.getElementsByTagName('table')[0],
+        rows = table.getElementsByTagName('tr'),
+        text = 'textContent' in document ? 'textContent' : 'innerText';
+
+    for (var i = 1, len = rows.length; i < len; i++){
+
+        rows[i].children[0][text] = i + ' ' + rows[i].children[0][text];
+    }
+});
+
+</script>
+
   <center><h1>{{member}}</h1></center>
   <hr>
   <table class="table table-striped">
     <tr>
       <th>#</th>
-      <th>ClientId</th>
       <th>Name</th>
       <th>Date of Breakfast</th>
       <th>Author</th>
@@ -15,8 +28,7 @@
     </tr>
     {% for visit in visits %}
       <tr>
-        <td>{{visit.numRows}}</td>
-        <td>{{visit.clientId}}</td>
+        <td></td>
         <td>{{visit.name}}</td>
         <td>{{visit.breakfastDate}}</td>
         <td>{{visit.author}}</td>
