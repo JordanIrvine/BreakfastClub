@@ -165,7 +165,7 @@ def memberSearch():
 	#Create cursor
 	cur = mysql.connection.cursor()
 
-	cur.execute("UPDATE members SET totalBreakfast=(SELECT COUNT(*) FROM visits Where members.clientId = visits.clientId) ")
+#	cur.execute("UPDATE members SET totalBreakfast=(SELECT COUNT(*) FROM visits Where members.clientId = visits.clientId) ")
 	#Get members
 	result = cur.execute("SELECT * FROM members ORDER BY name")
 
@@ -177,7 +177,7 @@ def memberSearch():
 # 	breakyCount = cur.execute("UPDATE COUNT(leftTillFree) FROM members Where")
 #
 # 	if statement needs to be made that "if members.LeftTillFree = 0, then show (redeem button) and reset LeftTillFree to 10)
-#   a seprate table will need to be created to keep track of redeemable breakfasts' 
+#   a seprate table will need to be created to keep track of redeemable breakfasts'
 # ********
 
 
@@ -209,12 +209,14 @@ def visitSearch(id):
 
 	#Get members
 
-	result = cur.execute("SELECT * FROM visits WHERE clientId = %s", [id])
+	visitResult = cur.execute("SELECT * FROM visits WHERE clientId = %s", [id])
 
-	visits = cur.fetchall()
+	result = cur.execute("SELECT * from members, visits WHERE members.clientId = %s AND visits.clientId = members.clientId", [id])
+
+ 	visits = cur.fetchall()
 
 	if result > 0:
-		return render_template('visitSearch.html', visits=visits, member=visits[0]['name'])
+		return render_template('visitSearch.html', visits=visits, name = visits[0]['name'])
 	else:
 		msg = 'No visits Found'
 		return render_template('visitSearch.html', msg=msg)
@@ -240,9 +242,9 @@ def add_visit(id, name):
 
 		cur.execute("SELECT * FROM visits WHERE clientId = %s", [id])
 
-		cur.execute("UPDATE members SET lastBreakfastDate = now() WHERE clientId = %s", [id])
+		#cur.execute("UPDATE members SET lastBreakfastDate = now() WHERE clientId = %s", [id])
 
-		cur.execute("UPDATE members SET leftTillFree =leftTillFree-1 WHERE clientId = %s", [id])
+		#cur.execute("UPDATE members SET leftTillFree =leftTillFree-1 WHERE clientId = %s", [id])
 
 		#totalBreakfast = cur.execute("UPDATE members SET totalBreakfast = (COUNT(*) from visits WHERE clientId = %s", (clientId)))
 
@@ -296,7 +298,7 @@ def delete_visit(visitId,clientId):
 	# Execute Delete
 	cur.execute("DELETE FROM visits WHERE visitId = %s", [visitId])
 
-	cur.execute("UPDATE members SET leftTillFree =leftTillFree+1 WHERE clientId = %s", [clientId])
+	#cur.execute("UPDATE members SET leftTillFree =leftTillFree+1 WHERE clientId = %s", [clientId])
 	# Commit to DB
 	mysql.connection.commit()
 
