@@ -1,21 +1,28 @@
-from flask import Flask, request, render_template, flash, redirect, url_for, session, logging, g
+from flask import Flask, request, render_template, flash, redirect, url_for, session, logging
 #from data import Articles
-import sqlite3 as sql
+from flask_mysqldb import MySQL
 from wtforms import Form, StringField, TextAreaField, PasswordField, validators
 from passlib.hash import sha256_crypt
 from functools import wraps
 
 app = Flask(__name__)
 
+# Config MySQL
+app.config['MYSQL_HOST'] = 'localhost'
+app.config['MYSQL_USER'] = 'root'
+app.config['MYSQL_PASSWORD'] = 'password'
+app.config['MYSQL_DB'] = 'BreakfastClubApp'
+app.config['MYSQL_CURSORCLASS'] = 'DictCursor'
+
+# init MYSQL
+mysql = MySQL(app)
+
+#Articles = Articles()
+
 #Index
 @app.route('/')
 def index():
 	return render_template('home.html')
-
-#Index
-@app.route('/help')
-def help():
-	return render_template('help.html')
 
 #Register form class
 class RegisterForm(Form):
@@ -38,9 +45,17 @@ def register():
 		username = form.username.data
 		password = sha256_crypt.encrypt(str(form.password.data))
 
-		with sql.connect('test6.db') as connection:
+		# Create cursor
+		cur = mysql.connection.cursor()
 
-			connection.execute("INSERT INTO users(name, email, username, password) VALUES(?,?,?,?)", (name, email, username, password))
+		#execute query
+		cur.execute("INSERT INTO users(name, email, username, password) VALUES(%s, %s, %s, %s)", (name, email, username, password))
+
+		#Commit to DB
+		mysql.connection.commit()
+
+		#Close connection
+		cur.close()
 
 		flash('You are now registered and can now log in', 'success')
 
@@ -51,42 +66,41 @@ def register():
 @app.route('/login', methods=['GET', 'POST'])
 def login():
 	if request.method == 'POST':
-		with sql.connect('test6.db') as connection:
+		# Get form fields
+		username = request.form['username']
+		password_candidate = request.form['password']
+		#name = request.form['name']
 
-			# Get form fields
-			username = request.form['username']
-			password_candidate = request.form['password']
-			#name = request.form['name']
+		#Create cursor
+		cur = mysql.connection.cursor()
 
-			cur = connection.execute("SELECT * FROM users WHERE username = ?", (username,))
+		#Get user by Username
+		result = cur.execute("SELECT * FROM users WHERE username = %s", [username])
 
-			result = cur.fetchone()
+		if result > 0:
+			#Get stored hash
+			data = cur.fetchone()
+			password = data['password']
 
-			if result is not None:
+			#Compare Passwords
+			if sha256_crypt.verify(password_candidate, password):
+				#PasswordField
+				session['logged_in'] = True
+				session['username'] = username
+				#session['name'] = name
 
-				data = result
-				print('data[password]', data)
-				password = data[4]
-
-				#Compare Passwords
-				if sha256_crypt.verify(password_candidate, password):
-					#PasswordField
-					session['logged_in'] = True
-					session['username'] = username
-					#session['name'] = name
-
-					flash('You are now logged in', 'success')
-					return redirect(url_for('memberSearch'))
-				else:
-					error = 'Invalid Login'
-					return render_template('login.html', error=error)
-				#close connection
+				flash('You are now logged in', 'success')
+				return redirect(url_for('memberSearch'))
 			else:
-				error = 'Username not found'
+				error = 'Invalid Login'
 				return render_template('login.html', error=error)
+			#close connection
+			cur.close()
+		else:
+			error = 'Username not found'
+			return render_template('login.html', error=error)
 
 	return render_template('login.html')
-
 
 #Check if user is logged in
 def is_logged_in(f):
@@ -112,17 +126,34 @@ def logout():
 @app.route('/memberSearch')
 @is_logged_in
 def memberSearch():
+	#Create cursor
+	cur = mysql.connection.cursor()
+	cur2 = mysql.connection.cursor()
 
-	with sql.connect('test6.db') as connection:
+#	cur.execute("UPDATE members SET totalBreakfast=(SELECT COUNT(*) FROM visits Where members.clientId = visits.clientId) ")
+	#Get member
+	result = cur.execute("SELECT * from members m join visits v where v.breakfastDate = (select max(visits.breakfastDate) from visits where visits.clientId = m.clientId) UNION select * from members m left join visits v on m.clientId = v.clientId where breakfastDate is NULL")
 
-		cur = connection.execute("SELECT * from members m join visits v where v.breakfastDate = (select max(visits.breakfastDate) from visits where visits.clientId = m.clientId) UNION select * from members m left join visits v on m.clientId = v.clientId where breakfastDate is NULL")
-		members = cur.fetchall()
+#
+# ******
+# 	breakyCount = cur.execute("UPDATE COUNT(leftTillFree) FROM members Where")
+#
+# 	if statement needs to be made that "if members.LeftTillFree = 0, then show (redeem button) and reset LeftTillFree to 10)
+#   a seprate table will need to be created to keep track of redeemable breakfasts'
+# ********
 
-		if members is not None:
-			return render_template('memberSearch.html', members=members)
-		else:
-			msg = 'No members Found'
-			return render_template('memberSearch.html', msg=msg)
+
+	members = cur.fetchall()
+
+	if result > 0:
+
+		return render_template('memberSearch.html', members=members)
+	else:
+		msg = 'No members Found'
+		return render_template('memberSearch.html', msg=msg)
+	#close connection
+	cur.close()
+
 
 #Member Form class
 class MemberForm(Form):
@@ -133,7 +164,7 @@ class MemberForm(Form):
 @is_logged_in
 def visitSearch(id):
 	#Create cursor
-	cur = connection.cursor()
+	cur = mysql.connection.cursor()
 
 	#Get members
 
@@ -158,7 +189,7 @@ def add_visit(id):
 	if request.method == 'POST':
 
 		# Create Cursor
-		cur = connection.cursor()
+		cur = mysql.connection.cursor()
 
 		clientId = [id]
 		author = session['username']
@@ -176,7 +207,7 @@ def add_visit(id):
 		#totalBreakfast = cur.execute("UPDATE members SET totalBreakfast = (COUNT(*) from visits WHERE clientId = %s", (clientId)))
 
 		# Commit to DB"INSERT INTO users(name, email, username, password) VALUES(%s, %s, %s, %s)", (name, email, username, password))
-		connection.commit()
+		mysql.connection.commit()
 
 		#Close connection
 		cur.close()
@@ -192,15 +223,23 @@ def add_member():
 	form = MemberForm(request.form)
 	if request.method == 'POST' and form.validate():
 
-		with sql.connect('test6.db') as connection:
 
-			name = form.name.data
+		name = form.name.data
+		# Create Cursor
+		cur = mysql.connection.cursor()
 
-			connection.execute("INSERT INTO members(name) VALUES(?)",[name],)
+		# Execute
+		cur.execute("INSERT INTO members(name) VALUES(%s)",[name])
 
-			flash('Member Created', 'success')
+		# Commit to DB
+		mysql.connection.commit()
 
-			return redirect(url_for('memberSearch'))
+		#Close connection
+		cur.close()
+
+		flash('Member Created', 'success')
+
+		return redirect(url_for('memberSearch'))
 
 	return render_template('add_member.html', form=form)
 
@@ -210,7 +249,7 @@ def add_member():
 def delete_visit(visitId,clientId):
 
 	# Create cursor
-	cur = connection.cursor()
+	cur = mysql.connection.cursor()
 
 	visitId = [visitId]
 
@@ -219,7 +258,7 @@ def delete_visit(visitId,clientId):
 
 	#cur.execute("UPDATE members SET leftTillFree =leftTillFree+1 WHERE clientId = %s", [clientId])
 	# Commit to DB
-	connection.commit()
+	mysql.connection.commit()
 
 	#Close connection
 	cur.close()
@@ -232,7 +271,7 @@ def delete_visit(visitId,clientId):
 def delete_member(id):
 
 	# Create cursor
-	cur = connection.cursor()
+	cur = mysql.connection.cursor()
 
 	# Deletes member
 
@@ -242,7 +281,7 @@ def delete_member(id):
 	cur.execute("DELETE FROM visits WHERE clientId = %s", [id])
 
 	# Commit to DB
-	connection.commit()
+	mysql.connection.commit()
 
 	#Close connection
 	cur.close()
@@ -257,13 +296,13 @@ def delete_member(id):
 def searchBar():
 	if request.method == "POST":
 		# Create cursor
-		cur = connection.cursor()
+		cur = mysql.connection.cursor()
 
 		# Execute
 		cur.execute("SELECT * FROM members where name = %s", (search,))
 
 		# Commit to DB
-		connection.commit()
+		mysql.connection.commit()
 
 		members = cur.fetchall()
 

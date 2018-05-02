@@ -31,7 +31,7 @@ $(document).ready(function(){
     //       }, fewSeconds*1000);
     //   });
 
-// Row Numbers 
+// Row Numbers
     var table = document.getElementsByTagName('table')[0],
         rows = table.getElementsByTagName('tr'),
         text = 'textContent' in document ? 'textContent' : 'innerText';
@@ -54,11 +54,14 @@ $(document).ready(function(){
       <tr>
         <th>#</th>
         <th>Name</th>
-        <th></th>
+        <td></td>
         <th>Join Date</th>
-        <!-- <th>Last Visit Date</th>
+        <th>Last Breakfast Date</th>
         <th>Total Visits</th>
-        <th>Visits Til Free Breakfast </th> -->
+        <th>Visits Til Free Breakfast </th>
+        <th>Author</th>
+        <th></th>
+        <th></th>
         <th></th>
         <th></th>
         <th></th>
@@ -69,17 +72,20 @@ $(document).ready(function(){
       <tr>
         <td></td>
         <td><a href="/visitSearch/{{member.clientId}}">{{member.name}}</a><td>
+        <td></td>
         <td>{{member.creationDate}}</td>
-        <!-- <td>{{member.lastBreakfastDate}}</td>
+        <td>{{member.lastBreakfastDate}}</td>
         <td>{{member.totalBreakfast}}</td>
-        <td>{{member.leftTillFree}}</td> -->
+        <td>{{member.leftTillFree}}</td>
+        <td>{{member.author}}</td>
+        <td></td>
         <td>
           <form action="{{url_for('memberSearch')}}" method="post">
               <input class="btn btn-success" value="Redeem free breakfast" type="button" display="none"></input>
           </form>
         </td>
         <td>
-          <form action="{{url_for('add_visit', id=member.clientId, name=member.name)}}" method="post">
+          <form action="{{url_for('add_visit', id=member.clientId)}}" method="post">
               <input type="submit" id="visit" class="btn btn-default" value="Add Visit"></input>
           </form>
         </td>
