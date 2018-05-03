@@ -10,11 +10,10 @@ app = Flask(__name__)
 #Index
 @app.route('/')
 def index():
-	with sql.connect('test10.db') as connection:
+	with sql.connect('test.db') as connection:
 
 		cur = connection.cursor()
 
-		cur.execute("CREATE TABLE IF NOT EXISTS users (userId INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,name varchar(100) DEFAULT NULL,email varchar(100) DEFAULT NULL,username varchar(30) DEFAULT NULL,password varchar(100) DEFAULT NULL,register_date timestamp NOT NULL DEFAULT (datetime('now', 'localtime')))")
 		# members
 		cur.execute("CREATE TABLE IF NOT EXISTS members (clientId INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, name varchar(50) NOT NULL, author varchar(50) DEFAULT NULL, creationDate timestamp NOT NULL DEFAULT (datetime('now', 'localtime')))")
 		# visits
@@ -51,7 +50,9 @@ def register():
 		username = form.username.data
 		password = sha256_crypt.encrypt(str(form.password.data))
 
-		with sql.connect('test6.db') as connection:
+		with sql.connect('test10.db') as connection:
+
+			connection.execute("CREATE TABLE IF NOT EXISTS users (userId INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,name varchar(100) DEFAULT NULL,email varchar(100) DEFAULT NULL,username varchar(30) DEFAULT NULL,password varchar(100) DEFAULT NULL,register_date timestamp NOT NULL DEFAULT (datetime('now', 'localtime')))")
 
 			connection.execute("INSERT INTO users(name, email, username, password) VALUES(?,?,?,?)", (name, email, username, password))
 
@@ -64,7 +65,7 @@ def register():
 @app.route('/login', methods=['GET', 'POST'])
 def login():
 	if request.method == 'POST':
-		with sql.connect('test10.db') as connection:
+		with sql.connect('test.db') as connection:
 
 			# Get form fields
 			username = request.form['username']
@@ -126,7 +127,7 @@ def logout():
 @is_logged_in
 def memberSearch():
 
-	with sql.connect('test10.db') as connection:
+	with sql.connect('test.db') as connection:
 		connection.row_factory = sql.Row
 		cur = connection.execute("SELECT * from members m join visits v where v.breakfastDate = (select max(visits.breakfastDate) from visits where visits.clientId = m.clientId) UNION select * from members m left join visits v on m.clientId = v.clientId where breakfastDate is NULL")
 
@@ -158,7 +159,7 @@ class MemberForm(Form):
 @is_logged_in
 def visitSearch(id):
 
-	with sql.connect('test10.db') as connection:
+	with sql.connect('test.db') as connection:
 		connection.row_factory = sql.Row
 
 		cur = connection.execute("SELECT * FROM visits WHERE clientId = ?", [id])
@@ -179,7 +180,7 @@ def visitSearch(id):
 def add_visit(id):
 	if request.method == 'POST':
 
-		with sql.connect('test10.db') as connection:
+		with sql.connect('test.db') as connection:
 			# Create Cursor
 			cur = connection.cursor()
 
@@ -210,7 +211,7 @@ def add_member():
 	form = MemberForm(request.form)
 	if request.method == 'POST' and form.validate():
 
-		with sql.connect('test10.db') as connection:
+		with sql.connect('test.db') as connection:
 
 			name = form.name.data
 
@@ -227,7 +228,7 @@ def add_member():
 @is_logged_in
 def delete_visit(visitId,clientId):
 
-	with sql.connect('test10.db') as connection:
+	with sql.connect('test.db') as connection:
 
 		cur = connection.cursor()
 
@@ -243,7 +244,7 @@ def delete_visit(visitId,clientId):
 @is_logged_in
 def delete_member(id):
 
-	with sql.connect('test10.db') as connection:
+	with sql.connect('test.db') as connection:
 		# Create cursor
 		cur = connection.cursor()
 
