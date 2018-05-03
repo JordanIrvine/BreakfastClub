@@ -10,7 +10,20 @@ app = Flask(__name__)
 #Index
 @app.route('/')
 def index():
-	return render_template('home.html')
+	with sql.connect('test10.db') as connection:
+
+		cur = connection.cursor()
+
+		cur.execute("CREATE TABLE IF NOT EXISTS users (userId INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,name varchar(100) DEFAULT NULL,email varchar(100) DEFAULT NULL,username varchar(30) DEFAULT NULL,password varchar(100) DEFAULT NULL,register_date timestamp NOT NULL DEFAULT (datetime('now', 'localtime')))")
+		# members
+		cur.execute("CREATE TABLE IF NOT EXISTS members (clientId INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, name varchar(50) NOT NULL, author varchar(50) DEFAULT NULL, creationDate timestamp NOT NULL DEFAULT (datetime('now', 'localtime')))")
+		# visits
+		cur.execute("CREATE TABLE IF NOT EXISTS visits (visitId INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,clientId int(11) DEFAULT NULL,breakfastDate timestamp NOT NULL DEFAULT (datetime('now', 'localtime')),author varchar(50) DEFAULT NULL, FOREIGN KEY(clientId) REFERENCES members(clientId))")
+		# redeem
+		cur.execute("CREATE TABLE IF NOT EXISTS redeem (redeemId INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,clientId int(11) DEFAULT NULL,redeemDate timestamp NOT NULL DEFAULT (datetime('now', 'localtime')),author varchar(50) DEFAULT NULL,redeem tinyint(1) NOT NULL DEFAULT '0', FOREIGN KEY(clientId) REFERENCES members(clientId))")
+
+
+		return render_template('home.html')
 
 #Index
 @app.route('/help')
@@ -51,7 +64,7 @@ def register():
 @app.route('/login', methods=['GET', 'POST'])
 def login():
 	if request.method == 'POST':
-		with sql.connect('test6.db') as connection:
+		with sql.connect('test10.db') as connection:
 
 			# Get form fields
 			username = request.form['username']
@@ -113,16 +126,28 @@ def logout():
 @is_logged_in
 def memberSearch():
 
-	with sql.connect('test6.db') as connection:
-
+	with sql.connect('test10.db') as connection:
+		connection.row_factory = sql.Row
 		cur = connection.execute("SELECT * from members m join visits v where v.breakfastDate = (select max(visits.breakfastDate) from visits where visits.clientId = m.clientId) UNION select * from members m left join visits v on m.clientId = v.clientId where breakfastDate is NULL")
-		members = cur.fetchall()
 
-		if members is not None:
+		members = build_dict_list(cur)
+
+		if members:
 			return render_template('memberSearch.html', members=members)
 		else:
 			msg = 'No members Found'
 			return render_template('memberSearch.html', msg=msg)
+
+# Utility Functions
+def build_dict_list(cur):
+	dict_list = []
+
+	nextElement = cur.fetchone()
+	while nextElement is not None:
+		dict_list.append(nextElement)
+		nextElement = cur.fetchone()
+
+	return dict_list
 
 #Member Form class
 class MemberForm(Form):
@@ -132,24 +157,21 @@ class MemberForm(Form):
 @app.route('/visitSearch/<string:id>/', methods=['GET', 'POST'])
 @is_logged_in
 def visitSearch(id):
-	#Create cursor
-	cur = connection.cursor()
 
-	#Get members
+	with sql.connect('test10.db') as connection:
+		connection.row_factory = sql.Row
 
-	visitResult = cur.execute("SELECT * FROM visits WHERE clientId = %s", [id])
+		cur = connection.execute("SELECT * FROM visits WHERE clientId = ?", [id])
 
-	result = cur.execute("SELECT * from members, visits WHERE members.clientId = %s AND visits.clientId = members.clientId", [id])
+		result = cur.execute("SELECT * from members, visits WHERE members.clientId = ? AND visits.clientId = members.clientId", [id])
+		visits = build_dict_list(cur)
 
- 	visits = cur.fetchall()
+		if visits:
+			return render_template('visitSearch.html', visits=visits, name = visits[0]['name'])
+		else:
+			msg = 'No visits Found'
+			return render_template('visitSearch.html', msg=msg)
 
-	if result > 0:
-		return render_template('visitSearch.html', visits=visits, name = visits[0]['name'])
-	else:
-		msg = 'No visits Found'
-		return render_template('visitSearch.html', msg=msg)
-	#close connection
-	cur.close()
 
 # Add Visit
 @app.route('/add_visit/<string:id>', methods=['GET', 'POST'])
@@ -157,33 +179,29 @@ def visitSearch(id):
 def add_visit(id):
 	if request.method == 'POST':
 
-		# Create Cursor
-		cur = connection.cursor()
+		with sql.connect('test10.db') as connection:
+			# Create Cursor
+			cur = connection.cursor()
 
-		clientId = [id]
-		author = session['username']
+			clientId = [id]
+			author = session['username']
+			print(session['username'])
+
+			# Execute
+			cur.execute("INSERT INTO visits(clientId) VALUES(?)", (clientId),)
+
+			cur.execute("SELECT * FROM visits WHERE clientId = ?", [id])
+
+			#cur.execute("UPDATE members SET lastBreakfastDate = now() WHERE clientId = %s", [id])
+
+			#cur.execute("UPDATE members SET leftTillFree =leftTillFree-1 WHERE clientId = %s", [id])
+
+			#totalBreakfast = cur.execute("UPDATE members SET totalBreakfast = (COUNT(*) from visits WHERE clientId = %s", (clientId)))
 
 
-		# Execute
-		cur.execute("INSERT INTO visits(clientId, author) VALUES(%s,%s)", (clientId, author))
+			flash('Visit created', 'success')
 
-		cur.execute("SELECT * FROM visits WHERE clientId = %s", [id])
-
-		#cur.execute("UPDATE members SET lastBreakfastDate = now() WHERE clientId = %s", [id])
-
-		#cur.execute("UPDATE members SET leftTillFree =leftTillFree-1 WHERE clientId = %s", [id])
-
-		#totalBreakfast = cur.execute("UPDATE members SET totalBreakfast = (COUNT(*) from visits WHERE clientId = %s", (clientId)))
-
-		# Commit to DB"INSERT INTO users(name, email, username, password) VALUES(%s, %s, %s, %s)", (name, email, username, password))
-		connection.commit()
-
-		#Close connection
-		cur.close()
-
-		flash('Visit created', 'success')
-
-	return redirect(url_for('memberSearch'))
+		return redirect(url_for('memberSearch'))
 
 # Add member
 @app.route('/add_member', methods=['GET', 'POST'])
@@ -192,7 +210,7 @@ def add_member():
 	form = MemberForm(request.form)
 	if request.method == 'POST' and form.validate():
 
-		with sql.connect('test6.db') as connection:
+		with sql.connect('test10.db') as connection:
 
 			name = form.name.data
 
@@ -209,47 +227,36 @@ def add_member():
 @is_logged_in
 def delete_visit(visitId,clientId):
 
-	# Create cursor
-	cur = connection.cursor()
+	with sql.connect('test10.db') as connection:
 
-	visitId = [visitId]
+		cur = connection.cursor()
 
-	# Execute Delete
-	cur.execute("DELETE FROM visits WHERE visitId = %s", [visitId])
+		visitId = [visitId]
 
-	#cur.execute("UPDATE members SET leftTillFree =leftTillFree+1 WHERE clientId = %s", [clientId])
-	# Commit to DB
-	connection.commit()
+		# Execute Delete
+		cur.execute("DELETE FROM visits WHERE visitId = ?", (visitId),)
 
-	#Close connection
-	cur.close()
-
-	return redirect(url_for('visitSearch', id=clientId))
+		return redirect(url_for('visitSearch', id=clientId))
 
 #Delete a member
 @app.route('/delete_member/<string:id>', methods=['POST'])
 @is_logged_in
 def delete_member(id):
 
-	# Create cursor
-	cur = connection.cursor()
+	with sql.connect('test10.db') as connection:
+		# Create cursor
+		cur = connection.cursor()
 
-	# Deletes member
+		# Deletes member
 
-	cur.execute("DELETE FROM members WHERE clientId = %s", [id])
+		cur.execute("DELETE FROM members WHERE clientId = ?", [id])
 
-	#deletes visits associated with member
-	cur.execute("DELETE FROM visits WHERE clientId = %s", [id])
+		#deletes visits associated with member
+		cur.execute("DELETE FROM visits WHERE clientId = ?", [id])
 
-	# Commit to DB
-	connection.commit()
+		flash('Member Deleted', 'success')
 
-	#Close connection
-	cur.close()
-
-	flash('Member Deleted', 'success')
-
-	return redirect(url_for('memberSearch'))
+		return redirect(url_for('memberSearch'))
 
 
 #Search bar for member page
@@ -273,8 +280,6 @@ def searchBar():
 
 	#Close connection
 	cur.close()
-
-
 
 if __name__ == '__main__':
 	app.secret_key='secret123'
