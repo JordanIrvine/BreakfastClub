@@ -8,6 +8,7 @@ import os.path
 
 
 app = Flask(__name__)
+app.secret_key='secret123'
 
 databases = "databases.db"
 dataBaseName = " "
@@ -353,5 +354,5 @@ def delete_member(id, defSess):
 		return redirect(url_for('memberSearch/', defSess=defSess))
 
 if __name__ == '__main__':
-	app.secret_key='secret123'
+
 	app.run(debug=True)
